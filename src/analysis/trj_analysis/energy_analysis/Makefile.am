@@ -73,11 +73,18 @@ else
 		-I../../../lib -I../../libana -I ../../../atdyn $(FCFLAGS) -c $*.f90
 endif
 
+# If PyTorch enabled
+if HAVE_PYTORCH
+    TORCH_LIBS = $(TORCH_WRAPPER_LDFLAGS)
+else
+    TORCH_LIBS = 
+endif
+
 energy_analysis$(EXEEXT) : $(energy_analysis_OBJECTS) \
 		$(energy_analysis_ADDLIBANA) $(energy_analysis_ADDLIB)
 	$(FC) -o $(bin_PROGRAMS) $(energy_analysis_OBJECTS) \
 		$(optional_objs) \
-		$(energy_analysis_ADDLIBANA) $(energy_analysis_ADDLIB) $(LDFLAGS)
+		$(energy_analysis_ADDLIBANA) $(energy_analysis_ADDLIB) $(LDFLAGS) $(TORCH_LIBS)
 
 clean:
 	rm -f $(bin_PROGRAMS) $(energy_analysis_OBJECTS) *.f90 *~ *.mod

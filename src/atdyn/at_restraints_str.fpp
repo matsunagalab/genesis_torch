@@ -79,7 +79,8 @@ module at_restraints_str_mod
   integer,      public, parameter :: RestraintsFuncFBCOM     = 16
   integer,      public, parameter :: RestraintsFuncRG        = 17
   integer,      public, parameter :: RestraintsFuncRGWOMASS  = 18
-
+  integer,      public, parameter :: RestraintsFuncTorch     = 19
+  
  
   ! parameters for kind of direction
   integer,      public, parameter :: RestraintsDirALL       = 1
@@ -92,7 +93,7 @@ module at_restraints_str_mod
   integer,      public, parameter :: RestraintsMaxRef       = 2
 
   ! restraints func type strings
-  character(*), public, parameter :: RestraintsFuncTypes(18) = (/'POSI     ', &
+  character(*), public, parameter :: RestraintsFuncTypes(19) = (/'POSI     ', &
                                                                 'DIST     ', &
                                                                 'DISTMASS ', &
                                                                 'RMSD     ', &
@@ -109,7 +110,8 @@ module at_restraints_str_mod
                                                                 'FB       ', &
                                                                 'FBMASS   ', &
                                                                 'RG       ', &
-                                                                'RGWOMASS '/)
+                                                                'RGWOMASS ', &
+                                                                'TORCH    '/)
 
   character(*), public, parameter :: RestraintsDirTypes(4)  = (/'ALL ', &
                                                                 'X   ', &

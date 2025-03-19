@@ -1,10 +1,10 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.59)
-AC_INIT(genesis, [2.1.5], genesis@riken.jp)
+AC_PREREQ([2.72])
+AC_INIT([genesis],[2.1.5],[genesis@riken.jp])
 AC_CONFIG_SRCDIR([src/spdyn/spdyn.fpp])
-AC_CONFIG_HEADER([src/config.h])
+AC_CONFIG_HEADERS([src/config.h])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
@@ -592,6 +592,33 @@ fi
 
 AM_CONDITIONAL(PARALLEL_IO, test x"${enable_parallel_IO}" = x"yes")
 
+## PyTorch
+#
+AC_ARG_ENABLE([pytorch],
+    AS_HELP_STRING([--enable-pytorch], [Enable PyTorch integration]),
+    [use_pytorch=$enableval],
+    [use_pytorch=no])
+
+# If PyTorch enabled
+if test "x$use_pytorch" = "xyes"; then
+    AC_DEFINE([HAVE_PYTORCH], [1], [Define if PyTorch is enabled])
+    
+    # specify torch_wrapper libray path
+    AC_ARG_WITH([torch-wrapper],
+        AS_HELP_STRING([--with-torch-wrapper=DIR], [Specify the directory containing torch_wrapper library]),
+        [torch_wrapper_dir=$withval],
+        [torch_wrapper_dir=""])
+    
+    if test "x$torch_wrapper_dir" != "x"; then
+        TORCH_WRAPPER_LDFLAGS="-L$torch_wrapper_dir -ltorch_wrapper"
+    else
+        TORCH_WRAPPER_LDFLAGS="-ltorch_wrapper"
+    fi
+    
+    AC_SUBST(TORCH_WRAPPER_LDFLAGS)
+fi
+
+AM_CONDITIONAL([HAVE_PYTORCH], [test "x$use_pytorch" = "xyes"])
 
 ## huge molecule on hard disk
 #
@@ -1751,3 +1778,4 @@ AM_COND_IF([ANALYSIS],[AC_CONFIG_FILES([src/analysis/Makefile
                 src/analysis/utilities/emmap_generator/Makefile
                 src/analysis/utilities/morph_generator/Makefile])])
 AC_OUTPUT
+

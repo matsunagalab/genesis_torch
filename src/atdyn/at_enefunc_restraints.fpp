@@ -717,6 +717,9 @@ contains
       if (enefunc%restraint_kind(ifunc) ==  RestraintsFuncEM) then
         call error_msg('Setup_Restraint_Reference> reference of EM is not needed')
       end if
+      if (enefunc%restraint_kind(ifunc) ==  RestraintsFuncTorch) then
+        call error_msg('Setup_Restraint_Reference> reference of Torch is not needed')
+      end if
     end if
 
     if ((ndata > 0) .and. &
@@ -726,7 +729,8 @@ contains
 
     if ((ndata == 0) .and. &
         (enefunc%restraint_kind(ifunc) /=  RestraintsFuncPOSI) .and. &
-        (enefunc%restraint_kind(ifunc) /=  RestraintsFuncEM  )) then
+        (enefunc%restraint_kind(ifunc) /=  RestraintsFuncEM  ) .and. &
+        (enefunc%restraint_kind(ifunc) /=  RestraintsFuncTorch)) then
       call error_msg('Setup_Restraint_Reference> reference is not given')
     end if
 

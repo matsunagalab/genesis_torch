@@ -27,9 +27,12 @@ module at_energy_restraints_mod
   use messages_mod
   use mpi_parallel_mod
   use constants_mod
+  use string_mod
 #ifdef HAVE_MPI_GENESIS
   use mpi
 #endif
+  use torch_interface_mod
+  use iso_c_binding
 
   implicit none
   private
@@ -46,6 +49,7 @@ module at_energy_restraints_mod
   private :: compute_energy_repulsive_restraint
   private :: compute_energy_flatbottom_restraint
   private :: compute_energy_rg_restraint
+  private :: compute_energy_torch_restraint
  
 contains
 
@@ -220,6 +224,13 @@ contains
       ! flat-bottom restraint
       !
       call compute_energy_flatbottom_restraint    &
+        (enefunc, boundary, coord, inum, calc_force, force, virial, eneval)
+
+    case (RestraintsFuncTorch)
+
+      ! Torch model restraint
+      !
+      call compute_energy_torch_restraint    &
         (enefunc, boundary, coord, inum, calc_force, force, virial, eneval)
 
     end select
@@ -488,7 +499,6 @@ contains
     integer,         pointer :: funcgrp(:)
     integer,         pointer :: expo(:)
     integer,         pointer :: expoind(:,:)
-
 
     funcgrp  => enefunc%restraint_funcgrp 
     expo     => enefunc%restraint_exponent_func
@@ -2093,5 +2103,116 @@ contains
     return
 
   end subroutine compute_energy_flatbottom_restraint
+
+  !======1=========2=========3=========4=========5=========6=========7=========8
+  !
+  !  Subroutine    compute_energy_torch_restraint
+  !> @brief        calculate torch model restraint energy and forces
+  !! @authors      YM
+  !! @param[in]    enefunc    : potential energy functions information
+  !! @param[in]    boundary   : information of boundary
+  !! @param[in]    coord      : coordinates of target systems
+  !! @param[inout] force      : forces of target systems
+  !! @param[inout] virial     : virial of target systems
+  !! @param[inout] virial_ext : virial of target systems
+  !! @param[inout] energy     : information of energy
+  !! @param[in]    inum       : index of restraint function
+  !! @param[in]    calc_force : flag for calculating force
+  !
+  !======1=========2=========3=========4=========5=========6=========7=========8
+
+  subroutine compute_energy_torch_restraint(enefunc, boundary, coord, &
+                                                  inum, calc_force, force,  &
+                                                  virial, eneval)
+
+    ! formal arguments
+    type(s_enefunc), target, intent(inout) :: enefunc
+    type(s_boundary),        intent(in)    :: boundary
+    real(wp),                intent(in)    :: coord(:,:)
+    integer,                 intent(in)    :: inum
+    logical,                 intent(in)    :: calc_force
+    real(wp),                intent(inout) :: force(:,:)
+    real(wp),                intent(inout) :: virial(3,3)
+    real(wp),                intent(out)   :: eneval
+
+    ! local variables
+    integer                  :: i, j, id, idx, num_atoms
+    integer(c_int)           :: input_size, output_size
+    real(wp)                 :: coef
+    real(c_float), allocatable :: coords_flat(:)
+    real(c_float), allocatable :: output_array(:)
+    real(wp), allocatable    :: forces_tmp(:,:)
+    
+    ! Get list of atoms for this restraint
+    id = enefunc%restraint_grouplist(1, inum)
+    num_atoms = enefunc%restraint_numatoms(id)
+    
+    ! Get coefficient
+    coef = enefunc%restraint_const(1, inum)
+    
+    ! Allocate memory for the coordinates and outputs
+    allocate(coords_flat(3*num_atoms))
+    allocate(output_array(1 + 3*num_atoms))
+    allocate(forces_tmp(3, num_atoms))
+    eneval = 0.0_wp
+    output_array(:) = real(0.0_wp, c_float)
+    forces_tmp(:, :) = 0.0_wp
+    
+    ! Convert coordinates to flat array for PyTorch model
+    idx = 1
+    do i = 1, num_atoms
+      j = enefunc%restraint_atomlist(i, id)
+      coords_flat(idx)   = real(coord(1, j), c_float)
+      coords_flat(idx+1) = real(coord(2, j), c_float)
+      coords_flat(idx+2) = real(coord(3, j), c_float)
+      idx = idx + 3
+    end do
+    
+    input_size = 3 * num_atoms
+    output_size = 1 + 3 * num_atoms
+
+    ! Call PyTorch model through the interface
+    if (main_rank .or. replica_main_rank) then
+      call run_torch_model(coords_flat, input_size, output_array, output_size)
+    end if
+    
+    ! Extract energy and forces from output
+    eneval = real(output_array(1), wp) * coef
+    
+    ! Apply forces if needed
+    if (calc_force) then
+      idx = 2
+      do i = 1, num_atoms
+        forces_tmp(1, i) = real(output_array(idx), wp) * coef
+        forces_tmp(2, i) = real(output_array(idx+1), wp) * coef
+        forces_tmp(3, i) = real(output_array(idx+2), wp) * coef
+        idx = idx + 3
+      end do
+      
+      ! Apply forces to the main force array
+      do i = 1, num_atoms
+        j = enefunc%restraint_atomlist(i, id)
+        force(1, j) = force(1, j) + forces_tmp(1, i)
+        force(2, j) = force(2, j) + forces_tmp(2, i)
+        force(3, j) = force(3, j) + forces_tmp(3, i)
+      end do
+    end if
+    ! if (main_rank .or. replica_main_rank) then
+    !   write(Msgout, *)'eneval = ', eneval
+    !   write(Msgout, *)'output_array = ', output_array(1:7)
+    !   write(Msgout, *)'forces_tmp1 = ', forces_tmp(:, 1)
+    !   write(Msgout, *)'forces_tmp2 = ', forces_tmp(:, 2)
+    !   write(Msgout, *)'forces1 = ', force(:, 1)
+    !   write(Msgout, *)'forces2 = ', force(:, 2)
+    ! end if
+    
+    ! Deallocate arrays
+    deallocate(coords_flat)
+    deallocate(output_array)
+    deallocate(forces_tmp)
+    
+    return
+    
+  end subroutine compute_energy_torch_restraint
 
 end module at_energy_restraints_mod

@@ -99,7 +99,8 @@ lib_a_SOURCES = \
 	fitting.fpp \
 	fileio_minfo.fpp \
 	structure_check.fpp \
-	ffte_param.h
+	ffte_param.h \
+	torch_interface.fpp
 
 EXTRA_DIST = \
 	Makefile.depends 

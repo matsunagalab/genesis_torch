@@ -128,8 +128,15 @@ else
 	$(FC)  $(DEFAULT_INCLUDES) $(INCLUDES) $(INCLUDE_DIR) $(FCFLAGS) -c $*.f90
 endif
 
+# If PyTorch enabled
+if HAVE_PYTORCH
+    TORCH_LIBS = $(TORCH_WRAPPER_LDFLAGS)
+else
+    TORCH_LIBS = 
+endif
+
 atdyn$(EXEEXT) : $(atdyn_ADDLIB) $(atdyn_OBJECTS)
-	$(FC) -o $(bin_PROGRAMS) $(atdyn_OBJECTS) $(atdyn_ADDLIB) $(atdyn_LDADD) $(LDFLAGS)
+	$(FC) -o $(bin_PROGRAMS) $(atdyn_OBJECTS) $(atdyn_ADDLIB) $(atdyn_LDADD) $(LDFLAGS) $(TORCH_LIBS)
 
 clean:
 	rm -f $(bin_PROGRAMS) $(atdyn_OBJECTS) *.f90 *~ *.mod
