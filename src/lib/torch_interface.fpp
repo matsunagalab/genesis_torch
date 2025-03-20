@@ -3,9 +3,17 @@ module torch_interface_mod
     implicit none
 
     private
+    public :: load_torch_model
+    public :: unload_torch_model
     public :: run_torch_model
 
     interface
+        subroutine load_torch_model() bind(C)
+        end subroutine load_torch_model
+
+        subroutine unload_torch_model() bind(C)
+        end subroutine unload_torch_model
+
         subroutine run_torch_model(input_array, input_size, output_array, output_size) bind(C)
             import :: c_int, c_float
             integer(c_int), value :: input_size, output_size

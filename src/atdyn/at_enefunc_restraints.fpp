@@ -21,6 +21,7 @@ module at_enefunc_restraints_mod
   use messages_mod
   use mpi_parallel_mod
   use constants_mod
+  use torch_interface_mod
 
   implicit none
   private
@@ -502,6 +503,16 @@ contains
         exit
       end if
     end do
+
+    ! setup cache for PyTorch model
+    if (main_rank .or. replica_main_rank) then
+      do i = 1, num_funcs
+        if (enefunc%restraint_kind(i) == RestraintsFuncTorch) then
+          call load_torch_model()
+          exit
+        end if
+      end do
+    end if
 
     ! for steered & targeted MD
     !
