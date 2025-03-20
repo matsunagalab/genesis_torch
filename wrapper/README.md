@@ -9,7 +9,7 @@ This folder demonstrates how to convert PyTorch models to TorchScript format and
 ```
 $ python traced_force_model.py
 $ ls
-traced_force_model.py
+traced_force_model.pt
 ```
 
 ## Compiling C++ wrapper
